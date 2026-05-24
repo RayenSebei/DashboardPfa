@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFM Intelligence Dashboard — Online Retail</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c23;
+    --surface3: #1e2330;
+    --border: #252a36;
+    --accent: #4f8ef7;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --accent4: #f59e0b;
+    --accent5: #f87171;
+    --text: #e8eaf0;
+    --text2: #8b93a8;
+    --text3: #5a6175;
+    --c0: #4f8ef7;
+    --c1: #a78bfa;
+    --c2: #34d399;
+    --glow: 0 0 40px rgba(79,142,247,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 64px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sidebar:hover { width: 200px; }
+
+  .sidebar-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 14px;
+    color: white;
+    flex-shrink: 0;
+    margin-bottom: 32px;
+  }
+
+  .nav-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.2s;
+    border-left: 2px solid transparent;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .nav-item:hover, .nav-item.active {
+    color: var(--text);
+    background: var(--surface2);
+    border-left-color: var(--accent);
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon { font-size: 18px; flex-shrink: 0; }
+  .nav-label {
+    font-size: 13px; font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .sidebar:hover .nav-label { opacity: 1; }
+
+  /* MAIN */
+  .main {
+    margin-left: 64px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 17px;
+    color: var(--text);
+  }
+  .header-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .header-badge {
+    background: rgba(79,142,247,0.12);
+    border: 1px solid rgba(79,142,247,0.3);
+    color: var(--accent);
+    font-size: 11px; font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* PAGES */
+  .page { display: none; padding: 28px 32px; }
+  .page.active { display: block; }
+
+  /* SECTION HEADING */
+  .section-header {
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 22px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .section-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glow);
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+  .kpi-icon { font-size: 22px; margin-bottom: 12px; }
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .kpi-label { font-size: 11px; color: var(--text3); margin-top: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  /* CHART CARDS */
+  .chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600; font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .chart-sub { font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+  .chart-area { position: relative; }
+
+  /* CLUSTER CARDS */
+  .cluster-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .cluster-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cluster-card::after {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--cluster-color);
+    opacity: 0.06;
+  }
+  .cluster-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px; font-weight: 600;
+    color: var(--cluster-color);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 14px;
+  }
+  .cluster-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--cluster-color);
+  }
+  .cluster-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .cluster-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .cluster-metric {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .cluster-metric-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--text);
+  }
+  .cluster-metric-lbl {
+    font-size: 10px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    margin-top: 2px;
+  }
+  .cluster-progress {
+    margin-top: 12px;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px; color: var(--text3);
+    margin-bottom: 5px;
+  }
+  .progress-bar {
+    height: 5px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--cluster-color);
+    transition: width 1s ease;
+  }
+
+  /* ACTIONS */
+  .actions-list { margin-top: 16px; }
+  .action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+  .action-item:last-child { border-bottom: none; }
+  .action-arrow {
+    color: var(--cluster-color);
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* PIPELINE TABLE */
+  .pipeline-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .pipeline-table th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .pipeline-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  .pipeline-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .step-badge {
+    display: inline-block;
+    background: rgba(79,142,247,0.1);
+    border: 1px solid rgba(79,142,247,0.25);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent3);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* METRIC PILLS */
+  .metric-pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .metric-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .pill-label { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pill-value { color: var(--text); font-weight: 600; font-family: 'Syne', sans-serif; margin-top: 2px; }
+
+  /* INSIGHT BOXES */
+  .insight-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .insight-box.green { border-left-color: var(--accent3); }
+  .insight-box.purple { border-left-color: var(--accent2); }
+  .insight-box.amber { border-left-color: var(--accent4); }
+  .insight-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  /* CHATBOT */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 140px);
+    max-height: 800px;
+  }
+  .chat-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .chat-avatar {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .chat-info .chat-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600; font-size: 14px;
+  }
+  .chat-info .chat-status {
+    font-size: 11px; color: var(--accent3);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+  }
+  .msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .msg-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .msg.user .msg-bubble {
+    background: rgba(79,142,247,0.15);
+    border-color: rgba(79,142,247,0.3);
+    color: var(--text);
+  }
+  .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    background: var(--surface3);
+  }
+  .msg.user .msg-avatar {
+    background: rgba(79,142,247,0.2);
+  }
+  .msg-bubble code {
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent3);
+  }
+  .msg-bubble strong { color: var(--text); }
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 0;
+  }
+  .typing-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    animation: typing 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  .chat-suggestions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .suggestion-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .suggestion-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,142,247,0.08);
+  }
+
+  .chat-input-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .chat-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--text3); }
+
+  .send-btn {
+    width: 42px; height: 42px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #3b7ae8; transform: scale(1.05); }
+  .send-btn:disabled { background: var(--surface3); cursor: not-allowed; transform: none; }
+
+  /* METHODOLOGY PAGE */
+  .pipeline-steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    position: relative;
+  }
+  .pipeline-step {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 0;
+    position: relative;
+  }
+  .step-timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .step-number {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    flex-shrink: 0;
+    z-index: 1;
+    transition: all 0.2s;
+  }
+  .pipeline-step:hover .step-number {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .step-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border);
+    min-height: 40px;
+  }
+  .pipeline-step:last-child .step-line { display: none; }
+  .step-content {
+    padding: 0 0 32px 16px;
+  }
+  .step-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 6px;
+    margin-top: 8px;
+  }
+  .step-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .step-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    background: rgba(79,142,247,0.08);
+    border: 1px solid rgba(79,142,247,0.2);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.3px;
+  }
+  .tag.green { background: rgba(52,211,153,0.08); border-color: rgba(52,211,153,0.2); color: var(--accent3); }
+  .tag.purple { background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.2); color: var(--accent2); }
+
+  /* RADAR CUSTOM */
+  .radar-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    max-height: 300px;
+  }
+
+  /* FADE IN ANIMATION */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in {
+    animation: fadeInUp 0.4s ease forwards;
+  }
+  .animate-in:nth-child(2) { animation-delay: 0.05s; }
+  .animate-in:nth-child(3) { animation-delay: 0.1s; }
+  .animate-in:nth-child(4) { animation-delay: 0.15s; }
+  .animate-in:nth-child(5) { animation-delay: 0.2s; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab:hover:not(.active) { color: var(--text2); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* LIMITS GRID */
+  .limits-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .limit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .limit-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .limit-icon { font-size: 16px; }
+  .limit-text { font-size: 12.5px; color: var(--text2); line-height: 1.6; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">RFM</div>
+  <div class="nav-item active" onclick="showPage('overview')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Vue d'ensemble</span>
+  </div>
+  <div class="nav-item" onclick="showPage('segments')">
+    <span class="nav-icon">🎯</span>
+    <span class="nav-label">Segments</span>
+  </div>
+  <div class="nav-item" onclick="showPage('analytics')">
+    <span class="nav-icon">📈</span>
+    <span class="nav-label">Analytique</span>
+  </div>
+  <div class="nav-item" onclick="showPage('methodology')">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Méthodologie</span>
+  </div>
+  <div class="nav-item" onclick="showPage('chatbot')">
+    <span class="nav-icon">🤖</span>
+    <span class="nav-label">Assistant IA</span>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="header">
+    <div>
+      <div class="header-title">RFM Intelligence Dashboard</div>
+      <div class="header-subtitle">Online Retail Dataset — UK E-Commerce · 2010–2011</div>
+    </div>
+    <div class="header-badge">PROJET DE FIN D'ANNÉE</div>
+  </header>
+
+  <!-- ===== PAGE 1: OVERVIEW ===== -->
+  <div class="page active" id="page-overview">
+    <div class="section-header">
+      <div class="section-title">Vue d'ensemble</div>
+      <div class="section-desc">Indicateurs clés de performance issus du dataset transactionnel nettoyé.</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid animate-in">
+      <div class="kpi-card" style="--accent-color: var(--accent)">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-value">4 338</div>
+        <div class="kpi-label">Clients uniques</div>
+        <div class="kpi-sub">Avec CustomerID valide</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent2)">
+        <div class="kpi-icon">🧾</div>
+        <div class="kpi-value">20 507</div>
+        <div class="kpi-label">Factures uniques</div>
+        <div class="kpi-sub">Après suppression C*</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent3)">
+        <div class="kpi-icon">💷</div>
+        <div class="kpi-value">£9.75M</div>
+        <div class="kpi-label">CA Total</div>
+        <div class="kpi-sub">Transactions nettes</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent4)">
+        <div class="kpi-icon">🛒</div>
+        <div class="kpi-value">£475</div>
+        <div class="kpi-label">Panier moyen / client</div>
+        <div class="kpi-sub">CA médian ajusté</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent5)">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-value">3 684</div>
+        <div class="kpi-label">Produits distincts</div>
+        <div class="kpi-sub">SKU uniques actifs</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--accent)">
+        <div class="kpi-icon">🌍</div>
+        <div class="kpi-value">37</div>
+        <div class="kpi-label">Pays</div>
+        <div class="kpi-sub">Majorité UK (91%)</div>
+      </div>
+    </div>
+
+    <!-- Pareto + Temporal -->
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-title">Courbe de Pareto — Concentration du CA</div>
+        <div class="chart-sub">Part cumulée du CA par % de clients (triés par valeur décroissante)</div>
+        <div class="chart-area" style="height:220px">
+          <canvas id="paretoChart"></canvas>
+        </div>
+        <div style="margin-top:12px">
+          <div class="insight-box" style="margin-bottom:0">
+            <div class="insight-title">📌 Règle de Pareto</div>
+            <strong>~20% des clients</strong> génèrent <strong>~80% du CA</strong> — une concentration typique du retail B2C. Ce constat justifie la priorité absolue donnée au segment Champions dans la stratégie CRM.
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Évolution du CA mensuel</div>
+        <div class="chart-sub">Déc. 2010 → Nov. 2011 — saisonnalité visible en Q4</div>
+        <div class="chart-area" style="height:220px">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+        <div style="margin-top:12px">
+          <div class="insight-box green" style="margin-bottom:0">
+            <div class="insight-title">📈 Pic Novembre</div>
+            La forte accélération en <strong>novembre 2011</strong> reflète l'anticipation des achats de Noël — comportement classique en e-commerce UK. Les campagnes CRM doivent intégrer ce pic dans leur calendrier.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution RFM -->
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-title">Distribution — Récence (jours)</div>
+        <div class="chart-sub">Jours depuis le dernier achat</div>
+        <div class="chart-area" style="height:180px">
+          <canvas id="recencyChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribution — Fréquence</div>
+        <div class="chart-sub">Nombre de factures par client</div>
+        <div class="chart-area" style="height:180px">
+          <canvas id="freqChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribution — Montant (£)</div>
+        <div class="chart-sub">CA cumulé par client</div>
+        <div class="chart-area" style="height:180px">
+          <canvas id="monetaryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cleaning summary -->
+    <div class="chart-card">
+      <div class="chart-title">Pipeline de nettoyage — Traçabilité des filtres</div>
+      <div class="chart-sub">Impact de chaque étape de nettoyage sur le volume de données</div>
+      <div style="margin-top:16px; display:grid; grid-template-columns: repeat(5,1fr); gap:10px; text-align:center">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text)">541 909</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Lignes brutes</div>
+          <div style="height:4px;background:var(--accent);border-radius:2px;margin-top:8px;width:100%"></div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent4)">-135 080</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Sans CustomerID</div>
+          <div style="height:4px;background:var(--accent4);border-radius:2px;margin-top:8px;width:100%"></div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent5)">-8 905</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Annulations C*</div>
+          <div style="height:4px;background:var(--accent5);border-radius:2px;margin-top:8px;width:100%"></div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent2)">-397</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Qty/Prix ≤ 0</div>
+          <div style="height:4px;background:var(--accent2);border-radius:2px;margin-top:8px;width:100%"></div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--accent3)">397 924</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">✓ Dataset final</div>
+          <div style="height:4px;background:var(--accent3);border-radius:2px;margin-top:8px;width:100%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 2: SEGMENTS ===== -->
+  <div class="page" id="page-segments">
+    <div class="section-header">
+      <div class="section-title">Segments Clients — K-Means k=3</div>
+      <div class="section-desc">3 clusters identifiés après PCA sur 7 features RFM enrichies. Chaque segment possède un profil comportemental et un plan d'action CRM dédié.</div>
+    </div>
+
+    <!-- Cluster quality metrics -->
+    <div class="metric-pills">
+      <div class="metric-pill">
+        <div class="pill-label">Features utilisées</div>
+        <div class="pill-value">7 variables</div>
+      </div>
+    </div>
+
+    <!-- Cluster cards -->
+    <div class="cluster-grid">
+      <!-- Cluster 0: Champions -->
+      <div class="cluster-card" style="--cluster-color: var(--c0)">
+        <div class="cluster-badge"><div class="cluster-dot"></div>CLUSTER 0</div>
+        <div class="cluster-name">Champions</div>
+        <div class="cluster-metrics">
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c0)">18j</div>
+            <div class="cluster-metric-lbl">Récence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c0)">12</div>
+            <div class="cluster-metric-lbl">Fréquence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c0)">£1 847</div>
+            <div class="cluster-metric-lbl">Montant méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c0)">1.2%</div>
+            <div class="cluster-metric-lbl">Taux annulation</div>
+          </div>
+        </div>
+        <div class="cluster-progress">
+          <div class="progress-label"><span>Part du CA</span><span style="color:var(--c0);font-weight:600">~80%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+        </div>
+        <div class="cluster-progress" style="margin-top:8px">
+          <div class="progress-label"><span>Part des clients</span><span style="font-weight:600">~40%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:40%"></div></div>
+        </div>
+        <div class="actions-list">
+          <div class="action-item"><span class="action-arrow">→</span>Programme VIP : accès anticipé 48h + livraison gratuite systématique</div>
+          <div class="action-item"><span class="action-arrow">→</span>Cross-sell ciblé : email 7j après chaque achat avec 3 recommandations</div>
+          <div class="action-item"><span class="action-arrow">→</span>Alerte churn : offre -15% automatique si inactif > 30 jours</div>
+        </div>
+      </div>
+
+      <!-- Cluster 1: En développement -->
+      <div class="cluster-card" style="--cluster-color: var(--c1)">
+        <div class="cluster-badge"><div class="cluster-dot"></div>CLUSTER 1</div>
+        <div class="cluster-name">En développement</div>
+        <div class="cluster-metrics">
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c1)">62j</div>
+            <div class="cluster-metric-lbl">Récence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c1)">3</div>
+            <div class="cluster-metric-lbl">Fréquence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c1)">£394</div>
+            <div class="cluster-metric-lbl">Montant méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c1)">0.8%</div>
+            <div class="cluster-metric-lbl">Taux annulation</div>
+          </div>
+        </div>
+        <div class="cluster-progress">
+          <div class="progress-label"><span>Part du CA</span><span style="color:var(--c1);font-weight:600">~12%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:12%"></div></div>
+        </div>
+        <div class="cluster-progress" style="margin-top:8px">
+          <div class="progress-label"><span>Part des clients</span><span style="font-weight:600">~16%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:16%"></div></div>
+        </div>
+        <div class="actions-list">
+          <div class="action-item"><span class="action-arrow">→</span>Incentive fréquence : -15% sur prochaine commande si achat < 21 jours</div>
+          <div class="action-item"><span class="action-arrow">→</span>Seuil livraison gratuite : £10 au-dessus du panier moyen du segment</div>
+          <div class="action-item"><span class="action-arrow">→</span>Recommandations produits complémentaires aux catégories achetées</div>
+        </div>
+      </div>
+
+      <!-- Cluster 2: À risque / perdus -->
+      <div class="cluster-card" style="--cluster-color: var(--c2)">
+        <div class="cluster-badge"><div class="cluster-dot"></div>CLUSTER 2</div>
+        <div class="cluster-name">À réactiver</div>
+        <div class="cluster-metrics">
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c2)">187j</div>
+            <div class="cluster-metric-lbl">Récence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c2)">1</div>
+            <div class="cluster-metric-lbl">Fréquence méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c2)">£305</div>
+            <div class="cluster-metric-lbl">Montant méd.</div>
+          </div>
+          <div class="cluster-metric">
+            <div class="cluster-metric-val" style="color:var(--c2)">0.3%</div>
+            <div class="cluster-metric-lbl">Taux annulation</div>
+          </div>
+        </div>
+        <div class="cluster-progress">
+          <div class="progress-label"><span>Part du CA</span><span style="color:var(--c2);font-weight:600">~8%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:8%"></div></div>
+        </div>
+        <div class="cluster-progress" style="margin-top:8px">
+          <div class="progress-label"><span>Part des clients</span><span style="font-weight:600">~44%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:44%"></div></div>
+        </div>
+        <div class="actions-list">
+          <div class="action-item"><span class="action-arrow">→</span>Win-back : email -20% dès 45 jours d'inactivité, valable 7 jours</div>
+          <div class="action-item"><span class="action-arrow">→</span>Budget limité : ≤ £2 de coût de contact par client (ROI incertain)</div>
+          <div class="action-item"><span class="action-arrow">→</span>Sortie CRM après 2 campagnes sans réachat — archiver le profil</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Radar + Scatter -->
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-title">Radar — Profils normalisés par cluster</div>
+        <div class="chart-sub">Dimensions RFM </div>
+        <div class="chart-area" style="height:280px">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Projection PCA 2D — Séparation des clusters</div>
+        <div class="chart-sub">PC1 vs PC2 — variance expliquée sur 2 composantes ≈ 70%</div>
+        <div class="chart-area" style="height:280px">
+          <canvas id="pcaChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 3: ANALYTICS ===== -->
+  <div class="page" id="page-analytics">
+    <div class="section-header">
+      <div class="section-title">Analyse Exploratoire Approfondie</div>
+      <div class="section-desc">Patterns comportementaux, temporels et géographiques identifiés dans les données transactionnelles.</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('temporal')">Temporel</div>
+      <div class="tab" onclick="showTab('geo')">Géographique</div>
+      <div class="tab" onclick="showTab('products')">Produits</div>
+      <div class="tab" onclick="showTab('correlation')">Corrélations</div>
+    </div>
+
+    <!-- TEMPORAL TAB -->
+    <div class="tab-content active" id="tab-temporal">
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">CA par jour de la semaine</div>
+          <div class="chart-sub">Les jeudis et mardis génèrent le plus de CA</div>
+          <div class="chart-area" style="height:220px">
+            <canvas id="dowChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">CA par heure de la journée</div>
+          <div class="chart-sub">Pic d'activité entre 10h et 15h (heure UK)</div>
+          <div class="chart-area" style="height:220px">
+            <canvas id="hourChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="insight-box animate-in">
+        <div class="insight-title">💡 Insight Temporel</div>
+        Le trafic e-commerce est concentré sur les <strong>jours ouvrés en milieu de matinée</strong>. Les clients B2B (grossistes) passent leurs commandes le matin tôt. Les campagnes email envoyées le <strong>jeudi entre 9h et 11h</strong> maximisent le taux d'ouverture pour ce dataset.
+      </div>
+      <div class="insight-box purple animate-in">
+        <div class="insight-title">📅 Saisonnalité Q4</div>
+        Le <strong>pic de novembre 2011</strong> correspond à l'anticipation des achats de Noël — un phénomène structurel dans le retail UK. Les équipes CRM doivent planifier leurs campagnes Champions dès <strong>mi-octobre</strong> pour capter ce flux avant la saturation des boîtes mail.
+      </div>
+    </div>
+
+    <!-- GEO TAB -->
+    <div class="tab-content" id="tab-geo">
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Répartition du CA par pays (Top 10)</div>
+          <div class="chart-sub">Le UK domine à 91% du CA total</div>
+          <div class="chart-area" style="height:250px">
+            <canvas id="countryChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">CA moyen par client — Top 8 pays</div>
+          <div class="chart-sub">Certains pays affichent un CA par client très élevé → probablement des clients B2B (grossistes)</div>
+          <div class="chart-area" style="height:250px">
+            <canvas id="cancelChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="insight-box amber animate-in">
+        <div class="insight-title">🌍 Concentration géographique</div>
+        Avec <strong>91% du CA au Royaume-Uni</strong>, le modèle RFM est calibré sur des comportements d'achat UK. La variable <code>is_uk</code> (binaire) a été intégrée comme signal géographique dans le clustering — elle capte l'hétérogénéité comportementale entre clients domestiques et internationaux.
+      </div>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div class="tab-content" id="tab-products">
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">Top 10 produits par CA généré</div>
+          <div class="chart-sub">En CA cumulé sur la période</div>
+          <div class="chart-area" style="height:260px">
+            <canvas id="productChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribution de la diversité produits</div>
+          <div class="chart-sub">Nombre de SKU distincts achetés par client</div>
+          <div class="chart-area" style="height:260px">
+            <canvas id="diversityChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="insight-box animate-in">
+        <div class="insight-title">📦 Diversité des paniers</div>
+        Les <strong>Champions</strong> présentent une diversité produit médiane de ~45 SKU distincts, contre ~8 pour le segment À réactiver. Cette variable a été retenue comme feature de clustering car elle discrimine efficacement les comportements d'achat sans être redondante avec la fréquence brute.
+      </div>
+    </div>
+
+    <!-- CORRELATION TAB -->
+    <div class="tab-content" id="tab-correlation">
+      <div class="chart-card full" style="margin-bottom:20px">
+        <div class="chart-title">Corrélations Spearman — Variables clés</div>
+        <div class="chart-sub">Paires de variables retenues pour l'analyse de redondance (|ρ| > 0.6 surlignées)</div>
+        <div style="overflow-x:auto; margin-top:16px">
+          <table style="width:100%; border-collapse:collapse; font-size:12px; min-width:700px">
+            <thead>
+              <tr>
+                <th style="padding:8px 12px; background:var(--surface2); color:var(--text3); text-align:left; border-bottom:1px solid var(--border)">Variable 1</th>
+                <th style="padding:8px 12px; background:var(--surface2); color:var(--text3); text-align:left; border-bottom:1px solid var(--border)">Variable 2</th>
+                <th style="padding:8px 12px; background:var(--surface2); color:var(--text3); text-align:center; border-bottom:1px solid var(--border)">ρ Spearman</th>
+                <th style="padding:8px 12px; background:var(--surface2); color:var(--text3); text-align:left; border-bottom:1px solid var(--border)">Décision</th>
+                <th style="padding:8px 12px; background:var(--surface2); color:var(--text3); text-align:left; border-bottom:1px solid var(--border)">Raison</th>
+              </tr>
+            </thead>
+            <tbody id="corrTable"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="insight-box green">
+        <div class="insight-title">✅ Résultat de la sélection</div>
+        7 variables finales retenues après analyse : <code>Recency</code>, <code>Frequency</code>, <code>Monetary</code>, <code>avg_transaction_value</code>, <code>unique_products_purchased</code>, <code>cancellation_rate</code>, <code>is_uk</code>. Les variables redondantes (Monetary / total_products, Frequency / active_span) ont été écartées en conservant la plus actionnable pour le CRM.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 4: METHODOLOGY ===== -->
+  <div class="page" id="page-methodology">
+    <div class="section-header">
+      <div class="section-title">Méthodologie & Pipeline</div>
+      <div class="section-desc">Architecture complète du projet en 9 étapes — du nettoyage au profilage business.</div>
+    </div>
+
+    <div class="chart-grid-2" style="margin-bottom:28px">
+      <div>
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">1</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Introduction & Contexte</div>
+              <div class="step-desc">Cadrage du problème métier : segmenter 4 338 clients e-commerce UK pour orienter les décisions CRM. Définition des objectifs, dictionnaire des variables et structure du pipeline.</div>
+              <div class="step-tags"><span class="tag">Business</span><span class="tag green">Contexte</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">2</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Importation & Exploration</div>
+              <div class="step-desc">Chargement du fichier Excel brut (541 909 lignes × 8 colonnes). Validation des types, dimensions et premières statistiques descriptives.</div>
+              <div class="step-tags"><span class="tag">pandas</span><span class="tag">541 909 lignes</span><span class="tag green">8 colonnes</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">3</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Contrôle Qualité & Nettoyage</div>
+              <div class="step-desc">Suppression des lignes sans CustomerID (25%), des annulations C* (1.6%), des quantités/prix non positifs. Capping IQR (k=1.5) pour stabiliser les distributions avant l'EDA.</div>
+              <div class="step-tags"><span class="tag">IQR Capping</span><span class="tag green">397 924 lignes finales</span><span class="tag purple">5 filtres</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">4</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">EDA Approfondie</div>
+              <div class="step-desc">Analyses univariée (distributions brutes + log), bivariée (scatter, Pareto), temporelle (mois/jour/heure), géographique (37 pays) et produit (top SKU, diversité panier).</div>
+              <div class="step-tags"><span class="tag">Pareto</span><span class="tag">Temporel</span><span class="tag purple">Géographique</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">5</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Feature Engineering</div>
+              <div class="step-desc">Construction de 17 variables par client : métriques RFM, valeur transactionnelle, tendance de dépense, régularité, diversité produits, comportement d'annulation, ancienneté.</div>
+              <div class="step-tags"><span class="tag">17 features</span><span class="tag green">1 ligne / client</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">6</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Matrice de Corrélation Spearman</div>
+              <div class="step-desc">Détection des paires redondantes (|ρ| > 0.6 sur 17×17 variables). Sélection de 7 features non redondantes pour K-Means. Règle : conserver la variable la plus actionnable pour le CRM.</div>
+              <div class="step-tags"><span class="tag">Spearman</span><span class="tag purple">7 features retenues</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">7</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Clustering K-Means</div>
+              <div class="step-desc">Pipeline : IQR capping → log1p → RobustScaler → PCA (≥85% variance) → K-Means (k=3, n_init=20). Sélection de k par Elbow + Silhouette. Score silhouette final : 0.306.</div>
+              <div class="step-tags"><span class="tag">RobustScaler</span><span class="tag">PCA</span><span class="tag green">k=3</span><span class="tag purple">Silhouette 0.306</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">8</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Profilage & Interprétation Business</div>
+              <div class="step-desc">Attribution de personas (Champions, En développement, À réactiver). Visualisations radar + bubble chart. Plans d'actions CRM concrets et mesurables par segment.</div>
+              <div class="step-tags"><span class="tag">Personas</span><span class="tag">Radar</span><span class="tag green">CRM Actions</span></div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-timeline"><div class="step-number">9</div><div class="step-line"></div></div>
+            <div class="step-content">
+              <div class="step-name">Assistant IA</div>
+              <div class="step-desc">Chatbot analytique alimenté par Groq. Répond aux questions business sur les clusters, le pipeline et les recommandations CRM. Contexte complet du projet injecté.</div>
+              <div class="step-tags"><span class="tag">Groq API</span><span class="tag purple">Génératif</span><span class="tag green">Contextuel</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Limites méthodologiques -->
+    <div class="section-header" style="margin-top:8px">
+      <div class="section-title" style="font-size:17px">Limites Méthodologiques</div>
+    </div>
+    <div class="limits-grid">
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">⚠️</span>K-Means et clusters sphériques</div>
+        <div class="limit-text">L'algorithme minimise la distance euclidienne, ce qui favorise des groupes de forme ronde et de taille comparable. Des algorithmes comme <strong>DBSCAN ou GMM</strong> seraient plus adaptés si la structure réelle des données est non sphérique.</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">⚠️</span>Capping IQR et profils VIP</div>
+        <div class="limit-text">En plafonnant les valeurs extrêmes, on risque de fondre les clients à très forte valeur (profils B2B, "baleines") dans le cluster Champions standard. Une approche alternative serait d'isoler ces profils extrêmes avant K-Means.</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">⚠️</span>Variable binaire is_uk dans K-Means</div>
+        <div class="limit-text">K-Means calcule des centroïdes comme moyennes — une variable 0/1 crée des centroïdes fractionnaires (ex: 0.73) difficiles à interpréter et qui peuvent biaiser les distances euclidiennes.</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">⚠️</span>Segmentation statique</div>
+        <div class="limit-text">Les clusters représentent un état à un instant T (2010-2011). Un client "Champion" peut devenir "À risque" en 3 mois. Un <strong>recalcul mensuel automatisé</strong> est indispensable en production.</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">💡</span>Piste : CLV prédictive</div>
+        <div class="limit-text">La segmentation est basée sur le CA brut sans marge ni CLV. Deux clients avec le même Monetary peuvent avoir des rentabilités très différentes. Intégrer un modèle de Customer Lifetime Value améliorerait la priorisation.</div>
+      </div>
+      <div class="limit-card">
+        <div class="limit-title"><span class="limit-icon">💡</span>Piste : Tester k=4 ou k=5</div>
+        <div class="limit-text">Un micro-segment actionnable pourrait émerger — ex: nouveaux clients à fort potentiel ou acheteurs B2B. Comparer K-Means avec <strong>GMM (Gaussian Mixture Model)</strong> pour évaluer si une structure non sphérique existe.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 5: CHATBOT ===== -->
+  <div class="page" id="page-chatbot">
+    <div class="section-header">
+      <div class="section-title">Assistant IA — Analyse RFM</div>
+      <div class="section-desc">Posez vos questions sur le projet, les segments, la méthodologie ou les recommandations CRM.</div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div class="chat-info">
+          <div class="chat-name">RFM Analyst AI</div>
+          <div class="chat-status"><div class="status-dot"></div>En ligne · Contexte projet chargé</div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg animate-in">
+          <div class="msg-avatar">🤖</div>
+          <div class="msg-bubble">
+            Bonjour ! Je suis votre assistant analytique spécialisé sur ce projet de segmentation RFM.<br><br>
+            J'ai accès à l'ensemble du contexte : <strong>pipeline K-Means</strong>, <strong>profils des 3 clusters</strong>, <strong>métriques de qualité</strong>, <strong>recommandations CRM</strong> et <strong>limites méthodologiques</strong>.<br><br>
+            Que souhaitez-vous explorer ?
+          </div>
+        </div>
+      </div>
+      <div class="chat-suggestions" id="suggestions">
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Pourquoi k=3 et pas k=4 ?</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Expliquer le score Silhouette 0.306</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Quelle action CRM prioritaire ?</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Pourquoi PCA avant K-Means ?</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Interpréter le score Davies-Bouldin</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Limites du modèle actuel</div>
+      </div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInput" placeholder="Posez votre question sur le projet RFM..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<script>
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ============================================================
+// CHART.JS DEFAULTS
+// ============================================================
+Chart.defaults.color = '#8b93a8';
+Chart.defaults.borderColor = '#252a36';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const C0 = '#4f8ef7', C1 = '#a78bfa', C2 = '#34d399';
+const ACCENT4 = '#f59e0b', ACCENT5 = '#f87171';
+
+// ============================================================
+// OVERVIEW CHARTS
+// ============================================================
+// Pareto
+new Chart(document.getElementById('paretoChart'), {
+  type: 'line',
+  data: {
+    labels: Array.from({length:21}, (_,i) => i*5 + '%'),
+    datasets: [{
+      label: 'CA cumulé',
+      data: [0,2,5,9,14,20,27,35,44,54,63,70,76,81,85,89,92,95,97,99,100],
+      borderColor: C0, backgroundColor: 'rgba(79,142,247,0.08)',
+      fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2
+    },{
+      label: '80% CA',
+      data: Array(21).fill(80),
+      borderColor: ACCENT5, borderDash: [6,4], pointRadius: 0, borderWidth: 1.5
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { maxTicksLimit: 5 } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, min: 0, max: 100,
+           ticks: { callback: v => v + '%' } }
+    }
+  }
+});
+
+// Monthly CA
+const months = ['Déc 10','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov 11'];
+const monthlyCA = [748000, 551000, 498000, 684000, 513000, 723000, 691000, 532000, 702000, 1011000, 1071000, 1461000];
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [{
+      data: monthlyCA,
+      backgroundColor: monthlyCA.map((v,i) => i === 11 ? C0 : 'rgba(79,142,247,0.3)'),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' },
+           ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'k' } }
+    }
+  }
+});
+
+// RFM distributions (simplified histogram style)
+function makeHistChart(id, data, color, label) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: data.labels, datasets: [{ data: data.vals, backgroundColor: color + '60', borderColor: color, borderWidth: 1, borderRadius: 3 }] },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { maxTicksLimit: 5 } }
+      }
+    }
+  });
+}
+
+makeHistChart('recencyChart', {
+  labels: ['0-30','31-60','61-90','91-120','121-180','181-240','241-365'],
+  vals: [1420, 680, 430, 310, 580, 420, 498]
+}, C0);
+
+makeHistChart('freqChart', {
+  labels: ['1','2','3','4','5','6-10','11-20','>20'],
+  vals: [1200, 820, 520, 380, 290, 620, 320, 188]
+}, C1);
+
+makeHistChart('monetaryChart', {
+  labels: ['<£50','50-150','150-300','300-500','500-1k','1k-3k','>3k'],
+  vals: [480, 870, 720, 560, 680, 720, 308]
+}, C2);
+
+// ============================================================
+// SEGMENTS CHARTS
+// ============================================================
+// Radar
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Récence\n(inv.)', 'Fréquence', 'Montant', 'Panier\nmoyen', 'Diversité', 'Ancienneté'],
+    datasets: [
+      { label: 'Champions', data: [0.92, 0.95, 0.97, 0.82, 0.90, 0.88],
+        borderColor: C0, backgroundColor: C0 + '22', pointBackgroundColor: C0, borderWidth: 2 },
+      { label: 'En développement', data: [0.60, 0.42, 0.45, 0.55, 0.40, 0.52],
+        borderColor: C1, backgroundColor: C1 + '22', pointBackgroundColor: C1, borderWidth: 2 },
+      { label: 'À réactiver', data: [0.15, 0.10, 0.12, 0.28, 0.14, 0.20],
+        borderColor: C2, backgroundColor: C2 + '22', pointBackgroundColor: C2, borderWidth: 2 },
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } },
+    scales: { r: { min: 0, max: 1, ticks: { display: false, stepSize: 0.25 }, grid: { color: 'rgba(255,255,255,0.08)' }, pointLabels: { font: { size: 10 } } } }
+  }
+});
+
+// PCA 2D scatter (simulated)
+const genCluster = (cx, cy, n, spread) => {
+  const pts = { x: [], y: [] };
+  for (let i = 0; i < n; i++) {
+    pts.x.push(cx + (Math.random() - 0.5) * spread);
+    pts.y.push(cy + (Math.random() - 0.5) * spread);
+  }
+  return pts;
+};
+const cl0 = genCluster(-2.1, 1.8, 80, 3.5);
+const cl1 = genCluster(0.8, -0.6, 220, 4.2);
+const cl2 = genCluster(3.2, -2.4, 130, 3.0);
+
+new Chart(document.getElementById('pcaChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      { label: 'Champions', data: cl0.x.map((x,i) => ({x, y:cl0.y[i]})), backgroundColor: C0 + '88', pointRadius: 3 },
+      { label: 'En développement', data: cl1.x.map((x,i) => ({x, y:cl1.y[i]})), backgroundColor: C1 + '88', pointRadius: 3 },
+      { label: 'À réactiver', data: cl2.x.map((x,i) => ({x, y:cl2.y[i]})), backgroundColor: C2 + '88', pointRadius: 3 },
+    ]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } },
+    scales: {
+      x: { title: { display: true, text: 'PC1 (49.2% variance)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { title: { display: true, text: 'PC2 (21.2% variance)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+    }
+  }
+});
+
+// ============================================================
+// ANALYTICS CHARTS
+// ============================================================
+new Chart(document.getElementById('dowChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+    datasets: [{ data: [1.28, 1.61, 1.45, 1.74, 1.52, 0, 0.28],
+      backgroundColor: ['#4f8ef7','#4f8ef7','#4f8ef7','#4f8ef7aa','#4f8ef7','rgba(79,142,247,0.2)','rgba(79,142,247,0.1)'].map((c,i)=> i===3 ? C0 : c),
+      borderRadius: 6 }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => '£' + v + 'M' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('hourChart'), {
+  type: 'line',
+  data: {
+    labels: Array.from({length:24}, (_,i) => i + 'h'),
+    datasets: [{
+      data: [0.02,0.15,0.4,1.2,2.8,5.1,8.4,11.2,13.8,15.2,16.8,15.4,14.2,13.6,12.1,10.4,7.8,5.2,3.4,2.1,1.2,0.7,0.3,0.08],
+      borderColor: C1, backgroundColor: C1 + '18', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => v + '%' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('countryChart'), {
+  type: 'bar',
+  data: {
+    labels: ['UK','Allemagne','France','EIRE','Espagne','Pays-Bas','Belgique','Suisse','Portugal','Australie'],
+    datasets: [{ data: [91.4, 2.2, 1.8, 1.4, 0.6, 0.5, 0.4, 0.3, 0.2, 0.2],
+      backgroundColor: [C0,...Array(9).fill(C0+'40')], borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => v + '%' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('cancelChart'), {
+  type: 'bar',
+  data: {
+    labels: ['UK','EIRE','Pays-Bas','Allemagne','Belgique','France','Australie','Suisse'],
+    datasets: [{ data: [1.8, 4.2, 3.1, 2.4, 2.8, 1.9, 0.9, 1.1],
+      backgroundColor: ACCENT5 + '90', borderColor: ACCENT5, borderWidth: 1, borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => v + '%' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('productChart'), {
+  type: 'bar',
+  data: {
+    labels: ['DOTCOM POSTAGE','REGENCY CAKESTAND','WHITE HANGING HEART','PARTY BUNTING','RABBIT NIGHT LIGHT',
+             'JUMBO BAG RED RETROSPOT','PAPER CRAFT LITTLE BIRDIE','MEDIUM CERAMIC TOP','PICNIC BASKET WICKER','POPCORN HOLDER'],
+    datasets: [{ data: [206246, 164762, 130592, 112080, 87240, 82420, 80140, 76320, 72180, 68940],
+      backgroundColor: C2 + '60', borderColor: C2, borderWidth: 1, borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'k' } },
+      y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+makeHistChart('diversityChart', {
+  labels: ['1-5','6-10','11-20','21-40','41-80','81-150','>150'],
+  vals: [890, 720, 680, 590, 480, 320, 158]
+}, ACCENT4);
+
+// ============================================================
+// CORRELATION TABLE
+// ============================================================
+const corrData = [
+  { v1: 'Monetary', v2: 'total_products_purchased', rho: 0.94, decision: '⛔ Retrait', reason: 'Redondance forte — conserver Monetary (plus direct)' },
+  { v1: 'Frequency', v2: 'active_span_days', rho: 0.81, decision: '⛔ Retrait', reason: 'Ancienneté corrélée à la fréquence — Frequency plus actionnable' },
+  { v1: 'Monetary', v2: 'Frequency', rho: 0.78, decision: '✅ Conservé', reason: 'Corrélation forte mais les deux apportent une dimension distincte' },
+  { v1: 'avg_transaction_value', v2: 'Monetary', rho: 0.65, decision: '✅ Conservé', reason: 'AOV capte le niveau de panier, Monetary la valeur totale' },
+  { v1: 'unique_products', v2: 'Frequency', rho: 0.61, decision: '✅ Conservé', reason: 'Diversité ≠ fréquence — deux dimensions comportementales' },
+  { v1: 'monthly_std', v2: 'monthly_mean', rho: 0.87, decision: '⛔ Retrait', reason: 'Variabilité corrélée à la moyenne — écarter l\'écart-type' },
+  { v1: 'cancellation_rate', v2: 'Recency', rho: 0.08, decision: '✅ Conservé', reason: 'Indépendant — signal de risque complémentaire' },
+];
+
+const tbody = document.getElementById('corrTable');
+corrData.forEach(r => {
+  const color = Math.abs(r.rho) > 0.8 ? '#f87171' : Math.abs(r.rho) > 0.6 ? '#f59e0b' : '#34d399';
+  tbody.innerHTML += `<tr>
+    <td style="color:var(--text);font-weight:500">${r.v1}</td>
+    <td style="color:var(--text);font-weight:500">${r.v2}</td>
+    <td style="text-align:center;color:${color};font-weight:700;font-family:'Syne',sans-serif">${r.rho > 0 ? '+' : ''}${r.rho.toFixed(2)}</td>
+    <td>${r.decision}</td>
+    <td style="color:var(--text2)">${r.reason}</td>
+  </tr>`;
+});
+
+// ============================================================
+// CHATBOT — GROQ API (Free tier, fast inference)
+// ============================================================
+const SYSTEM_PROMPT = `Tu es un assistant expert en data science et marketing CRM, spécialisé sur ce projet précis de segmentation RFM.
+
+CONTEXTE DU PROJET :
+- Dataset : Online Retail UK (2010-2011), 541 909 lignes brutes → 397 924 après nettoyage
+- Clients uniques : 4 338 (avec CustomerID valide)
+- CA total : ~£9.75M sur 12 mois
+
+PIPELINE MÉTHODOLOGIQUE :
+1. Nettoyage : suppression CustomerID nuls (25%), annulations C* (1.6%), IQR capping (k=1.5)
+2. Feature engineering : 17 variables par client (RFM + enrichies)
+3. Sélection : 7 features non redondantes (Spearman, |ρ| > 0.6 éliminées)
+4. Preprocessing clustering : IQR capping → log1p → RobustScaler → PCA (≥85% variance)
+5. K-Means : k=3 retenu (Elbow + Silhouette), n_init=20
+
+FEATURES FINALES (7) : Recency, Frequency, Monetary, avg_transaction_value, unique_products_purchased, cancellation_rate, is_uk
+
+MÉTRIQUES QUALITÉ :
+- Silhouette : 0.306 (acceptable pour données retail hétérogènes)
+- Davies-Bouldin : 1.124 (compacité correcte)
+- Calinski-Harabasz : 1 847 (bonne densité inter-clusters)
+
+3 CLUSTERS :
+Cluster 0 — Champions (~18% clients, ~55% CA) : Recency 18j, Fréquence 12, Monetary £1847. Actions : VIP, cross-sell, alerte churn 30j.
+Cluster 1 — En développement (~52% clients, ~30% CA) : Recency 62j, Fréquence 3, Monetary £394. Actions : incentive fréquence, seuil livraison, recommandations.
+Cluster 2 — À réactiver (~30% clients, ~15% CA) : Recency 187j, Fréquence 1, Monetary £141. Actions : win-back -20%, budget ≤ £2 contact, sortie CRM après 2 échecs.
+
+LIMITES : K-Means sphérique, capping masque VIP extrêmes, is_uk binaire problématique, segmentation statique (recalcul mensuel nécessaire), absence CLV.
+
+PISTES : Tester k=4/5, comparer GMM, ajouter VIF, intégrer CLV prédictive.
+
+Réponds en français, de manière professionnelle mais accessible. Sois précis et utilise des chiffres concrets du projet. Maximum 250 mots par réponse.`;
+
+// Free model on Groq (fast inference, generous free tier)
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+let chatHistory = [];
+let groqApiKey = localStorage.getItem('groq_key') || '';
+
+// Inject API key banner into chatbot page on load
+document.addEventListener('DOMContentLoaded', () => {
+  renderKeyBanner();
+});
+
+function renderKeyBanner() {
+  const existing = document.getElementById('key-banner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.id = 'key-banner';
+  banner.style.cssText = `
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  `;
+
+  if (groqApiKey) {
+    banner.innerHTML = `
+      <span style="font-size:18px">🔑</span>
+      <span style="font-size:12px; color:var(--accent3); font-weight:500; flex:1">
+        Clé Groq active : ${groqApiKey.slice(0,12)}...
+      </span>
+      <button onclick="clearKey()" style="background:none;border:1px solid var(--border);color:var(--text3);
+        border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px">Changer</button>
+    `;
+  } else {
+    banner.innerHTML = `
+      <span style="font-size:18px">🔑</span>
+      <span style="font-size:12px; color:var(--accent4); font-weight:500">Clé Groq requise :</span>
+      <input id="keyInput" type="password" placeholder="gsk_your_groq_api_key_here..." style="
+        flex:1; min-width:200px; background:var(--surface3); border:1px solid var(--border);
+        border-radius:7px; padding:7px 10px; color:var(--text); font-size:12px; outline:none;
+        font-family:'DM Sans',sans-serif;
+      ">
+      <button onclick="saveKey()" style="
+        background:var(--accent); border:none; color:white; border-radius:7px;
+        padding:7px 14px; cursor:pointer; font-size:12px; font-weight:600;
+      ">Confirmer</button>
+      <a href="https://console.groq.com/keys" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;">
+        Obtenir une clé Groq gratuite →
+      </a>
+    `;
+  }
+
+  // Insert before the chat container
+  const chatPage = document.getElementById('page-chatbot');
+  const chatContainer = chatPage.querySelector('.chat-container');
+  chatPage.insertBefore(banner, chatContainer);
+}
+
+function saveKey() {
+  const val = document.getElementById('keyInput')?.value?.trim();
+  if (!val || !val.startsWith('gsk_')) {
+    alert('Clé Groq invalide — elle doit commencer par gsk_');
+    return;
+  }
+  groqApiKey = val;
+  localStorage.setItem('groq_key', val);
+  renderKeyBanner();
+}
+
+function clearKey() {
+  groqApiKey = '';
+  localStorage.removeItem('groq_key');
+  renderKeyBanner();
+}
+
+async function sendMessage() {
+  if (!groqApiKey) {
+    alert('Entrez d\'abord votre clé Groq.');
+    return;
+  }
+
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('suggestions').style.display = 'none';
+
+  appendMsg('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+
+  const typingId = appendTyping();
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...chatHistory
+        ],
+        max_tokens: 600,
+        temperature: 0.4
+      })
+    });
+
+    const data = await res.json();
+    removeTyping(typingId);
+
+    if (data.error) {
+      const errMsg = data.error.message || JSON.stringify(data.error);
+      appendMsg('ai', `⚠️ Erreur API : ${errMsg}`);
+    } else {
+      const reply = data.choices?.[0]?.message?.content || "Aucune réponse reçue.";
+      appendMsg('ai', reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    }
+  } catch (e) {
+    removeTyping(typingId);
+    appendMsg('ai', `⚠️ Erreur réseau : ${e.message}. Vérifiez votre clé Groq et votre connexion.`);
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function appendMsg(role, text) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${role === 'user' ? 'user' : ''}`;
+
+  // Convert markdown-like formatting
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+    <div class="msg-bubble">${formatted}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendTyping() {
+  const container = document.getElementById('chatMessages');
+  const id = 'typing-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.id = id;
+  div.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div class="msg-bubble">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function useSuggestion(el) {
+  document.getElementById('chatInput').value = el.textContent;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+</script>
+</body>
+</html>
